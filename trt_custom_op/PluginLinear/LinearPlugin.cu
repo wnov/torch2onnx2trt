@@ -18,8 +18,12 @@
  #include "LinearPlugin.h"
  #include <assert.h>
 #include <stdio.h>
- 
- #define CHECK(call)\
+
+#define BDIMX 32
+#define BDIMY 32
+#define IPAD 2
+
+#define CHECK(call)\
  {\
    const cudaError_t error=call;\
    if(error!=cudaSuccess)\
@@ -28,23 +32,23 @@
        printf("code:%d,reason:%s\n",error,cudaGetErrorString(error));\
        exit(1);\
    }\
- }
+}
  
 // 矩阵转置，便于矩阵乘法的访存优化
 __global__ void matrixTranspose(const float *input, float *output, const int height, const int width){
-    __shared__ float buffer[32][32 + 1];
+    __shared__ float buffer[BDIMY][BDIMX + IPAD];
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
+    // 行读取，行写入
     if (x < width || y < height)
-        buffer[y][x] = input[y * width + x];
+        buffer[threadIdx.y][threadIdx.x] = input[y * width + x];
     __syncthreads();
 
-    if (y >= width || x >= height)
-        return;
-    
-    output[y * height + x] = buffer[x][y];
+    if (x < width || y < height)
+        // 列读取，行写入，加pad消除冲突
+        output[y * height + x] = buffer[threadIdx.x][threadIdx.y];
 }
 
  // 用于计算的 kernel
@@ -256,16 +260,16 @@ __global__ void matrixTranspose(const float *input, float *output, const int hei
     const int height = inChannel, width=outChannel;
     float * transpoedWeight_d = nullptr;
     cudaMalloc((void**)&transpoedWeight_d, sizeof(float) * nElement);
-    {   
-        dim3 grid(CEIL_DIVIDE(height, 32), CEIL_DIVIDE(width, 32), 1), block(32, 32, 1);
+    {   dim3 block(BDIMX, BDIMY, 1);
+        dim3 grid(CEIL_DIVIDE(height, block.x), CEIL_DIVIDE(width, block.y), 1);
         matrixTranspose<<<grid, block, 0, stream>>>(weight_d, transpoedWeight_d, height, width);
         CHECK(cudaDeviceSynchronize());
     }
 
-     dim3 grid(CEIL_DIVIDE(nElement, 256), 1, 1), block(256, 1, 1);
+    dim3 grid(CEIL_DIVIDE(nElement, 256), 1, 1), block(256, 1, 1);
     LinearKernel<<<grid, block, 0, stream>>>((float *)inputs[0], (float *)outputs[0], transpoedWeight_d, bias_d, inChannel, outChannel, nElement);
-     std::cout << "Succeed enqueuing!" << std::endl;    
-     return 0;
+    std::cout << "Succeed enqueuing!" << std::endl;    
+    return 0;
  }
  
  void LinearPlugin::destroy() noexcept

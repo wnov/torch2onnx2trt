@@ -158,7 +158,8 @@ cython_debug/
 
 
 *.onnx
-.npz
+*.npz
+*.plan
 
 # C extensions
 *.so
