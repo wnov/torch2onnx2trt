@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-#include "LinearPlugin.h"
 #include <assert.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
+
+#include "LinearPlugin.h"
 
 #define BDIMX 32
 #define BDIMY 32
 #define IPAD 2
 
-#define CHECK(call)                                                            \
-  {                                                                            \
-    const cudaError_t error = call;                                            \
-    if (error != cudaSuccess) {                                                \
-      printf("ERROR: %s:%d,", __FILE__, __LINE__);                             \
-      printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));         \
-      exit(1);                                                                 \
-    }                                                                          \
+#define CHECK(call)                                                    \
+  {                                                                    \
+    const cudaError_t error = call;                                    \
+    if (error != cudaSuccess) {                                        \
+      printf("ERROR: %s:%d,", __FILE__, __LINE__);                     \
+      printf("code:%d,reason:%s\n", error, cudaGetErrorString(error)); \
+      exit(1);                                                         \
+    }                                                                  \
   }
 
 // 矩阵转置，便于矩阵乘法的访存优化
@@ -62,8 +63,7 @@ __global__ void LinearKernel(const float *input, float *output,
 
   rowNb = index / outChanenel;
   colNb = index % outChanenel;
-  if (index >= nElement)
-    return;
+  if (index >= nElement) return;
 
   const float *idata = input + rowNb * inChannel;
   const float *iweight = weight + colNb * inChannel;
@@ -75,7 +75,8 @@ __global__ void LinearKernel(const float *input, float *output,
   output[index] = res + bias[colNb];
 }
 
-template <typename T> void writeToBuffer(char *&buffer, const T &val) {
+template <typename T>
+void writeToBuffer(char *&buffer, const T &val) {
   *reinterpret_cast<T *>(buffer) = val;
   buffer += sizeof(T);
 }
@@ -167,10 +168,9 @@ DataType LinearPlugin::getOutputDataType(int32_t index,
   return inputTypes[0];
 }
 
-DimsExprs
-LinearPlugin::getOutputDimensions(int32_t outputIndex, const DimsExprs *inputs,
-                                  int32_t nbInputs,
-                                  IExprBuilder &exprBuilder) noexcept {
+DimsExprs LinearPlugin::getOutputDimensions(
+    int32_t outputIndex, const DimsExprs *inputs, int32_t nbInputs,
+    IExprBuilder &exprBuilder) noexcept {
   WHERE_AM_I();
   DimsExprs outputDim;
   outputDim.nbDims = inputs[0].nbDims;
@@ -197,15 +197,16 @@ bool LinearPlugin::supportsFormatCombination(int32_t pos,
 #ifdef DEBUG
   bool res;
   switch (pos) {
-  case 0:
-    res = inOut[0].type == DataType::kFLOAT &&
-          inOut[0].format == TensorFormat::kLINEAR;
-    break;
-  case 1:
-    res = inOut[1].format == inOut[0].format && inOut[1].type == inOut[0].type;
-    break;
-  default: // should NOT be here!
-    res = false;
+    case 0:
+      res = inOut[0].type == DataType::kFLOAT &&
+            inOut[0].format == TensorFormat::kLINEAR;
+      break;
+    case 1:
+      res =
+          inOut[1].format == inOut[0].format && inOut[1].type == inOut[0].type;
+      break;
+    default:  // should NOT be here!
+      res = false;
   }
 
   std::cout << "\tpos=" << pos << ",res=" << res << "->[";
@@ -222,15 +223,16 @@ bool LinearPlugin::supportsFormatCombination(int32_t pos,
   std::cout << "Start checking format!" << std::endl;
   switch (pos) {
     bool res;
-  case 0:
-    res = inOut[0].type == DataType::kFLOAT &&
-          inOut[0].format == TensorFormat::kLINEAR;
-    return res;
-  case 1:
-    res = inOut[1].type == inOut[0].type && inOut[1].format == inOut[0].format;
-    return res;
-  default: // should NOT be here!
-    return false;
+    case 0:
+      res = inOut[0].type == DataType::kFLOAT &&
+            inOut[0].format == TensorFormat::kLINEAR;
+      return res;
+    case 1:
+      res =
+          inOut[1].type == inOut[0].type && inOut[1].format == inOut[0].format;
+      return res;
+    default:  // should NOT be here!
+      return false;
   }
 
   return false;
@@ -390,9 +392,8 @@ LinearPluginCreator::LinearPluginCreator() {
 LinearPluginCreator::~LinearPluginCreator() { WHERE_AM_I(); }
 
 // 最重要的两个成员函数，分别用于“接受参数创建 Plugin” 和 “去序列化创建 Plugin”
-IPluginV2 *
-LinearPluginCreator::createPlugin(const char *name,
-                                  const PluginFieldCollection *fc) noexcept {
+IPluginV2 *LinearPluginCreator::createPlugin(
+    const char *name, const PluginFieldCollection *fc) noexcept {
   WHERE_AM_I();
   int inChannel = 0;
   int outChannel = 0;
@@ -420,9 +421,8 @@ LinearPluginCreator::createPlugin(const char *name,
   return pObj;
 }
 
-IPluginV2 *
-LinearPluginCreator::deserializePlugin(const char *name, const void *serialData,
-                                       size_t serialLength) noexcept {
+IPluginV2 *LinearPluginCreator::deserializePlugin(
+    const char *name, const void *serialData, size_t serialLength) noexcept {
   WHERE_AM_I();
   std::cout << "Start deserialing plugin!" << std::endl;
   LinearPlugin *pObj = new LinearPlugin(name, serialData, serialLength);
@@ -460,7 +460,7 @@ const PluginFieldCollection *LinearPluginCreator::getFieldNames() noexcept {
 
 REGISTER_TENSORRT_PLUGIN(LinearPluginCreator);
 
-} // namespace nvinfer1
+}  // namespace nvinfer1
 
 struct Rectangle {
   double length{};

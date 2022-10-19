@@ -5,9 +5,9 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 // "${PATH}",
-                "/home/wn/applications/libtorch/include",
-                "/home/wn/applications/libtorch/include/torch/csrc/api/include",
-                "/home/wn/anaconda3/include/python3.7m"
+                "/home/wn/anaconda3/envs/py38/lib/python3.8/site-packages/torch/include",
+                "/home/wn/anaconda3/envs/py38/lib/python3.8/site-packages/torch/include/torch/csrc/api/include",
+                "/home/wn/anaconda3/envs/py38/include/python3.8/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
